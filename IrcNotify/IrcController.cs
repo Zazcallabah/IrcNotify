@@ -62,13 +62,13 @@ namespace IrcNotify
 			else if( _parts.Any( p => e.Message.Contains( p ) ) )
 			{
 				var match = _commands.Match( e.Message );
-				_alert( string.Format( "{0}: {1}", match.Groups["CMD"], match.Groups["NICK"] ), "" );
+				_alert( string.Format( "{0}: {1}", match.Groups["CMD"], match.Groups["NICK"] ), "..." );
 			}
 		}
 
 		void MessageSent( object sender, MessageEventArgs e )
 		{
-			_console( "SENT: " + e.Message + "\r\n" );
+			_console( "SENT: " + e.Message );
 		}
 
 		public void Close()
