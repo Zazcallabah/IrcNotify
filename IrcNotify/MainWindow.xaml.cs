@@ -1,48 +1,42 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+﻿using System.Windows;
 
 namespace IrcNotify
 {
-    /// <summary>
-    /// Interaction logic for MainWindow.xaml
-    /// </summary>
-    public partial class MainWindow : Window
-    {
-        Controller _controller;
-        public MainWindow()
-        {
-            InitializeComponent();
-          DataContext = _controller = new Controller(MyNotifyIcon);
-        }
+	/// <summary>
+	/// Interaction logic for MainWindow.xaml
+	/// </summary>
+	public partial class MainWindow : Window
+	{
+		readonly Controller _controller;
 
-        protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
-        {
-            //clean up notifyicon (would otherwise stay open until application finishes)
-            MyNotifyIcon.Dispose();
-            _controller.Dispose();
-            base.OnClosing(e);
-        }
-        private void ToggleConsole(object sender, RoutedEventArgs e)
-        {
-       if(     Visibility == Visibility.Visible)
-           Visibility = Visibility.Hidden;
-       else Visibility = Visibility.Visible;
-        }
+		public MainWindow()
+		{
+			InitializeComponent();
+			DataContext = _controller = new Controller( MyNotifyIcon );
+		}
 
-        private void Exit(object sender, RoutedEventArgs e)
-        {
-            Application.Current.Shutdown();
-        }
-    }
+
+		protected override void OnClosing( System.ComponentModel.CancelEventArgs e )
+		{
+			//clean up notifyicon (would otherwise stay open until application finishes)
+			MyNotifyIcon.Dispose();
+			_controller.Dispose();
+			base.OnClosing( e );
+		}
+
+		void ToggleConsole( object sender, RoutedEventArgs e )
+		{
+			Visibility = Visibility == Visibility.Visible ? Visibility.Hidden : Visibility.Visible;
+		}
+
+		void Exit( object sender, RoutedEventArgs e )
+		{
+			Application.Current.Shutdown();
+		}
+
+		void Reconnect( object sender, RoutedEventArgs e )
+		{
+			_controller.Reconnect();
+		}
+	}
 }
