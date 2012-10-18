@@ -1,63 +1,58 @@
 ﻿using System;
-using System.Threading;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.ComponentModel;
 using System.Windows;
 using Hardcodet.Wpf.TaskbarNotification;
-using System.ComponentModel;
 
 namespace IrcNotify
 {
-    class Controller : IDisposable, INotifyPropertyChanged
+	class Controller : IDisposable, INotifyPropertyChanged
+	{
+		readonly TaskbarIcon _icon;
+		readonly IrcController _irc;
+		string _data;
+		Visibility _visibileconsole;
 
-    {
-        bool _running = false;
-        TaskbarIcon _icon;
-        IrcClient _irc;
-        public Controller( TaskbarIcon icon )
-        {            
-            _icon = icon;
-            Data = "";
-            ConsoleVisibility = Visibility.Hidden;
-            _irc = new IrcClient((s) => { Data += s; },ShowNotification);
-            _irc.Connect();
-            _irc.Logon();
-            _irc.Join();
-            
-            var t = new System.Threading.Thread( _irc.Loop );
-            t.Start();
-        }
+		public Controller( TaskbarIcon icon )
+		{
+			_icon = icon;
+			Data = "";
+			ConsoleVisibility = Visibility.Hidden;
 
-        string _data;
-        private Visibility _visibileconsole;
+			_irc = new IrcController( ShowNotification, ( s ) => { Data += s; } );
+			_irc.ConnectAsync();
+		}
 
-        public string Data { get { return _data; } set { _data = value; FirePropChanged("Data"); } }
+		public void Reconnect()
+		{
+			_irc.ReconnectIfDisconnected();
+		}
+		public void ShowNotification( string title, string msg )
+		{
+			_icon.ShowBalloonTip( title, msg, _icon.Icon );
+		}
 
-        public void ShowNotification(string msg)
-        {
-            string title = "IRC";
+		public string Data { get { return _data; } set { _data = value; FirePropChanged( "Data" ); } }
 
-            _icon.ShowBalloonTip(title, msg, _icon.Icon);
-        }
+		public Visibility ConsoleVisibility
+		{
+			get { return _visibileconsole; }
+			set { _visibileconsole = value; FirePropChanged( "ConsoleVisibility" ); }
+		}
 
-        public Visibility ConsoleVisibility
-        {
-            get { return _visibileconsole; }
-            set { _visibileconsole = value; FirePropChanged("ConsoleVisibility"); }
-        }
+		public void Dispose()
+		{
+			_irc.Close();
+		}
 
-        public void Dispose()
-        {
-            _irc.Close();
-            _running = false;
-        }
-        void FirePropChanged(string property)
-        {
-            if (PropertyChanged != null)
-                PropertyChanged(this, new PropertyChangedEventArgs(property));
-        }
-        public event PropertyChangedEventHandler PropertyChanged;
-    }
+		void FirePropChanged( string property )
+		{
+			if( PropertyChanged != null )
+				PropertyChanged( this, new PropertyChangedEventArgs( property ) );
+		}
+
+		public event PropertyChangedEventHandler PropertyChanged;
+
+
+	}
 }
 

@@ -1,41 +1,60 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Configuration;
-using System.Linq;
-using System.Text;
 using System.Net.Sockets;
-using System.Text.RegularExpressions;
 
 namespace IrcNotify
 {
-    class IrcClient
-    {
-        private IEnumerable<string> _listen = new[] {"ZAZ", "FLILY", "ALMIRA", "DASH"};
-        Action<string> _alert;
-        Action<string> _console;
-        public IrcClient(Action<string> console, Action<string> alert)
-        {
-            _console = console;
-            _alert = alert;
-        }
+	public class MessageEventArgs : EventArgs
+	{
+		public MessageEventArgs(string message)
+		{
+			Message=message;
+		}
+		public string Message{get;private set;}
+	}
 
+    public class IrcListener
+    {
         TcpClient _client;
         System.IO.Stream _comm;
         System.IO.StreamReader _input;
         System.IO.StreamWriter _output;
-        public void Send( string command )
+
+		public IrcListener()
+		{
+			CurrentStatus = "Inactive";
+		}
+
+		public string CurrentStatus { get; private set; }
+		
+		public event EventHandler<MessageEventArgs> MessageReceived;
+		public event EventHandler<MessageEventArgs> MessageSent;
+
+		void FireMessageReceived( string message )
+		{
+			if( MessageReceived != null )
+				MessageReceived( this, new MessageEventArgs( message ) );
+		}
+
+		void FireMessageSent( string message )
+		{
+			if( MessageSent != null )
+			 MessageSent(this,new MessageEventArgs(message));
+		}
+
+
+        void Send( string command )
         {
-            _console("SEND: " + command);
             _output.Write(command);
             _output.Flush();
+            FireMessageSent(command);
         }
 
-        public string BlockingRead()
+        string BlockingRead()
         {
             try
             {
                 var inline = _input.ReadLine();
-                _console("RECV: " + inline+"\r\n");
                 if (inline.ToUpperInvariant().StartsWith("PING "))
                 {
                     Send("PONG " + inline.Substring(5) + "\r\n");
@@ -51,6 +70,7 @@ namespace IrcNotify
         public void Close()
         {
             _client.Close();
+			CurrentStatus = "Closed";
         }
 
         public void Connect()
@@ -69,8 +89,9 @@ namespace IrcNotify
             _comm = _client.GetStream();
             _input = new System.IO.StreamReader(_comm);
             _output = new System.IO.StreamWriter(_comm);
+			CurrentStatus = "Connected";
         }
-        public bool Logon()
+        public void Logon()
         {
             String nick = ConfigurationManager.AppSettings["NICK"];
             String login = ConfigurationManager.AppSettings["LOGIN"];
@@ -79,52 +100,37 @@ namespace IrcNotify
             Send(string.Format("USER {0} {1} {2} :fulhak2.0\r\n", login, ConfigurationManager.AppSettings["ALT_NICK"],
                                ConfigurationManager.AppSettings["SERVER"]));
  
-            String line = null;
+            String line;
             while ((line = BlockingRead()) != null)
             {
                 if (line.IndexOf("004") >= 0)
                 {
-                    return true;
+                    CurrentStatus = "Logged in";
+					return;
                 }
-                else if (line.IndexOf("433") >= 0)
+                if (line.IndexOf("433") >= 0)
                 {
-                    return false;
+					CurrentStatus = "Nick taken";
+                    return;
                 }
             }
-            return false;
+			CurrentStatus = "Disconnected";
         }
+
         public void Join()
         {
             Send("JOIN " + ConfigurationManager.AppSettings["CHANNEL"] + "\r\n");
+			CurrentStatus = "Listening";
         }
 
-        IEnumerable<string> _parts = new []{"JOIN","PART","QUIT"};
-        Regex _privmsg = new Regex( ConfigurationManager.AppSettings["PRIVMSG_EXTRACT"] );
-        Regex _commands = new Regex( ":(?'NICK'[^!]+)![^ ]+ (?'CMD'[^ ]+) " );
-        public void Loop()
+		public void Loop()
         {
             string line;
             while ((line = BlockingRead()) != null)
             {
-                if (_listen.Any( l => line.ToUpperInvariant().Contains(l)))
-                {
-                    if (line.Contains("PRIVMSG"))
-                    {
-                       var match= _privmsg.Match(line);
-                       _alert(string.Format("{0} {1}: {2}", match.Groups["CHANNEL"],match.Groups["NICK"],match.Groups["MSG"]));
-                            //  <add key="PRIVMSG_EXTRACT" value=":(?'NICK'[^!]+)![^ ]+ PRIVMSG (?'CHANNEL'[^ ]+) :(?'MSG')"/>
-
-                      //  _alert(line);
-                    }
-                    else if( _parts.Any(p=>line.Contains(p)))
-                    {
-                      var match =  _commands.Match(line);
-                        _alert(string.Format("{0}: {1}", match.Groups["CMD"], match.Groups["NICK"]));
-                    }
-                }
+				FireMessageReceived( line );
             }
-            _console("TERM");
+			CurrentStatus = "Disconnected";
         }
-
     }
 }
