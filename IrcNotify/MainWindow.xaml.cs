@@ -33,5 +33,16 @@ namespace IrcNotify
             _controller.Dispose();
             base.OnClosing(e);
         }
+        private void ToggleConsole(object sender, RoutedEventArgs e)
+        {
+       if(     Visibility == Visibility.Visible)
+           Visibility = Visibility.Hidden;
+       else Visibility = Visibility.Visible;
+        }
+
+        private void Exit(object sender, RoutedEventArgs e)
+        {
+            Application.Current.Shutdown();
+        }
     }
 }

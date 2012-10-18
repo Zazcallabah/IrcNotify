@@ -3,6 +3,7 @@ using System.Threading;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Windows;
 using Hardcodet.Wpf.TaskbarNotification;
 using System.ComponentModel;
 
@@ -15,8 +16,10 @@ namespace IrcNotify
         TaskbarIcon _icon;
         IrcClient _irc;
         public Controller( TaskbarIcon icon )
-        {
+        {            
             _icon = icon;
+            Data = "";
+            ConsoleVisibility = Visibility.Hidden;
             _irc = new IrcClient((s) => { Data += s; },ShowNotification);
             _irc.Connect();
             _irc.Logon();
@@ -27,6 +30,7 @@ namespace IrcNotify
         }
 
         string _data;
+        private Visibility _visibileconsole;
 
         public string Data { get { return _data; } set { _data = value; FirePropChanged("Data"); } }
 
@@ -35,6 +39,12 @@ namespace IrcNotify
             string title = "IRC";
 
             _icon.ShowBalloonTip(title, msg, _icon.Icon);
+        }
+
+        public Visibility ConsoleVisibility
+        {
+            get { return _visibileconsole; }
+            set { _visibileconsole = value; FirePropChanged("ConsoleVisibility"); }
         }
 
         public void Dispose()
