@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IrcNotify", "IrcNotify\IrcNotify.csproj", "{C9405815-D0BF-4330-8DA7-81C9F37F6037}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NotifyIconWpf", "..\wpf-notifyicon\NotifyIconWpf\NotifyIconWpf.csproj", "{7AC63864-7638-41C4-969C-D3197EF2BED9}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NotifyIconWpf", "NotifyIconWpf\NotifyIconWpf.csproj", "{7AC63864-7638-41C4-969C-D3197EF2BED9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
