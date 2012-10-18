@@ -98,8 +98,9 @@ namespace IrcNotify
             Send("JOIN " + ConfigurationManager.AppSettings["CHANNEL"] + "\r\n");
         }
 
-
+        IEnumerable<string> _parts = new []{"JOIN","PART","QUIT"};
         Regex _privmsg = new Regex( ConfigurationManager.AppSettings["PRIVMSG_EXTRACT"] );
+        Regex _commands = new Regex( ":(?'NICK'[^!]+)![^ ]+ (?'CMD'[^ ]+) " );
         public void Loop()
         {
             string line;
@@ -114,6 +115,11 @@ namespace IrcNotify
                             //  <add key="PRIVMSG_EXTRACT" value=":(?'NICK'[^!]+)![^ ]+ PRIVMSG (?'CHANNEL'[^ ]+) :(?'MSG')"/>
 
                       //  _alert(line);
+                    }
+                    else if( _parts.Any(p=>line.Contains(p)))
+                    {
+                      var match =  _commands.Match(line);
+                        _alert(string.Format("{0}: {1}", match.Groups["CMD"], match.Groups["NICK"]));
                     }
                 }
             }
