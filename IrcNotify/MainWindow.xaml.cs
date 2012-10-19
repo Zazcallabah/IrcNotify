@@ -42,5 +42,10 @@ namespace IrcNotify
 		{
 			_controller.Reconnect();
 		}
+
+		private void MyNotifyIcon_TrayLeftMouseUp( object sender, RoutedEventArgs e )
+		{
+			_controller.Acknowledge();
+		}
 	}
 }

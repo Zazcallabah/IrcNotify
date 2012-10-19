@@ -14,11 +14,18 @@ namespace IrcNotify
 		readonly IrcController _irc;
 		string _data;
 		Visibility _visibileconsole;
+		bool _hasAlert;
+		bool HasAlert
+		{
+			get { return _hasAlert; }
+			set { if( _hasAlert != value ) { _hasAlert = value; FirePropChanged( "CurrentIconState" ); } }
+		}
 
 		public Controller( TaskbarIcon icon )
 		{
 			_icon = icon;
 			Data = "";
+			HasAlert = false;
 			ConsoleVisibility = Visibility.Hidden;
 
 			_irc = new IrcController( ShowNotification, ( s ) => { Data += s; } );
@@ -31,8 +38,10 @@ namespace IrcNotify
 		{
 			_irc.ReconnectIfDisconnected();
 		}
+
 		public void ShowNotification( string title, string msg )
 		{
+			HasAlert = true;
 			_icon.ShowBalloonTip( title, msg, _icon.Icon );
 		}
 
@@ -68,11 +77,16 @@ namespace IrcNotify
 		{
 			get
 			{
-				var iconname = "chat";
+				var iconname = HasAlert ? "notify" : "chat";
 				if( _uriLookup.ContainsKey( _irc.Status ) )
 					iconname = _uriLookup[_irc.Status];
 				return new BitmapImage( new Uri( @"pack://application:,,,/IrcNotify;component/Resources/" + iconname + ".ico" ) );
 			}
+		}
+
+		public void Acknowledge()
+		{
+			HasAlert = false;
 		}
 	}
 
