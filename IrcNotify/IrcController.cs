@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Configuration;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -7,7 +8,7 @@ using System.Threading;
 
 namespace IrcNotify
 {
-	class IrcController
+	class IrcController : INotifyPropertyChanged
 	{
 		readonly Action<string, string> _alert;
 		readonly Action<string> _console;
@@ -23,21 +24,30 @@ namespace IrcNotify
 		public void ConnectAsync()
 		{
 			_listener = new IrcListener();
+			_listener.PropertyChanged += new PropertyChangedEventHandler( BubbleStatusChange );
 			_listener.MessageReceived += MessageReceived;
 			_listener.MessageSent += MessageSent;
 			_activeListener = new Thread( Connect );
 			_activeListener.Start();
 		}
 
+		void BubbleStatusChange( object sender, PropertyChangedEventArgs e )
+		{
+			if( e.PropertyName == "CurrentStatus" )
+			{
+				FirePropertyChanged( "Status" );
+			}
+		}
+
 		void Connect()
 		{
 			if( _listener.CurrentStatus == "Inactive" || _listener.CurrentStatus == "Disconnected" )
 			{
-				_listener.Connect();
+				_listener.Connect( ConfigurationManager.AppSettings["SERVER"], ConfigurationManager.AppSettings["PORT"] );
 				_listener.Logon();
 				if( _listener.CurrentStatus == "Logged in" )
 				{
-					_listener.Join();
+					_listener.Join( ConfigurationManager.AppSettings["CHANNEL"] );
 					_listener.Loop();
 				}
 			}
@@ -45,7 +55,7 @@ namespace IrcNotify
 
 		readonly IEnumerable<string> _parts = new[] { "JOIN", "PART", "QUIT" };
 		readonly Regex _privmsg = new Regex( ConfigurationManager.AppSettings["PRIVMSG_EXTRACT"] );
-		readonly Regex _commands = new Regex( ":(?'NICK'[^!]+)![^ ]+ (?'CMD'[^ ]+) " );
+		readonly Regex _commands = new Regex( ConfigurationManager.AppSettings["JOINPART_EXTRACT"] );
 		void MessageReceived( object sender, MessageEventArgs e )
 		{
 			_console( "RECV: " + e.Message + "\r\n" );
@@ -55,9 +65,6 @@ namespace IrcNotify
 			{
 				var match = _privmsg.Match( e.Message );
 				_alert( string.Format( "{0}: {1}", match.Groups["CHANNEL"], match.Groups["NICK"] ), match.Groups["MSG"].ToString() );
-				//  <add key="PRIVMSG_EXTRACT" value=":(?'NICK'[^!]+)![^ ]+ PRIVMSG (?'CHANNEL'[^ ]+) :(?'MSG')"/>
-
-				//  _alert(line);
 			}
 			else if( _parts.Any( p => e.Message.Contains( p ) ) )
 			{
@@ -77,7 +84,8 @@ namespace IrcNotify
 			{
 				_listener.MessageReceived -= MessageReceived;
 				_listener.MessageSent -= MessageSent;
-				if( _listener.CurrentStatus != "Inactive" && _listener.CurrentStatus != "Disconnected" )
+				_listener.PropertyChanged -= BubbleStatusChange;
+				if( _listener.CurrentStatus != "Inactive" && _listener.CurrentStatus != "Disconnected" && _listener.CurrentStatus != "Closed" )
 					_listener.Close();
 				_listener = null;
 			}
@@ -96,5 +104,14 @@ namespace IrcNotify
 				ConnectAsync();
 			}
 		}
+
+		public string Status { get { return _listener == null ? "Disconnected" : _listener.CurrentStatus; } }
+
+		void FirePropertyChanged( string property )
+		{
+			if( PropertyChanged != null )
+				PropertyChanged( this, new PropertyChangedEventArgs( property ) );
+		}
+		public event PropertyChangedEventHandler PropertyChanged;
 	}
 }
