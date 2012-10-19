@@ -27,6 +27,7 @@ namespace IrcNotify
 			Data = "";
 			HasAlert = false;
 			ConsoleVisibility = Visibility.Hidden;
+			icon.TrayBalloonTipClicked += ( o, e ) => Acknowledge();
 
 			_irc = new IrcController( ShowNotification, ( s ) => { Data += s; } );
 			_irc.PropertyChanged += ( o, e ) => FirePropChanged( "CurrentIconState" );
