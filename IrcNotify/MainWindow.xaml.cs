@@ -24,9 +24,13 @@ namespace IrcNotify
 			base.OnClosing( e );
 		}
 
-		void ToggleConsole( object sender, RoutedEventArgs e )
+		void OpenConsole( object sender, RoutedEventArgs e )
 		{
-			Visibility = Visibility == Visibility.Visible ? Visibility.Hidden : Visibility.Visible;
+			if( Application.Current.Windows.Count == 1 )
+			{
+				var newWindow = new ConsoleWindow { DataContext = _controller };
+				newWindow.Show();
+			}
 		}
 
 		void Exit( object sender, RoutedEventArgs e )
