@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using Hardcodet.Wpf.TaskbarNotification;
 
 namespace IrcNotify
@@ -19,7 +22,9 @@ namespace IrcNotify
 			ConsoleVisibility = Visibility.Hidden;
 
 			_irc = new IrcController( ShowNotification, ( s ) => { Data += s; } );
+			_irc.PropertyChanged += ( o, e ) => FirePropChanged( "CurrentIconState" );
 			_irc.ConnectAsync();
+
 		}
 
 		public void Reconnect()
@@ -53,6 +58,22 @@ namespace IrcNotify
 		public event PropertyChangedEventHandler PropertyChanged;
 
 
+		readonly IDictionary<string, string> _uriLookup = new Dictionary<string, string> {
+		{ "Disconnected", "offline" },
+		{ "Closed", "offline" },
+		{ "Inactive", "offline" },
+		{ "Connecting", "connecting" } };
+		public ImageSource CurrentIconState
+		{
+			get
+			{
+				var iconname = "chat";
+				if( _uriLookup.ContainsKey( _irc.Status ) )
+					iconname = _uriLookup[_irc.Status];
+				return new BitmapImage( new Uri( @"pack://application:,,,/IrcNotify;component/Resources/" + iconname + ".ico" ) );
+			}
+		}
 	}
+
 }
 
