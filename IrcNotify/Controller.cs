@@ -61,6 +61,7 @@ namespace IrcNotify
 		readonly IDictionary<string, string> _uriLookup = new Dictionary<string, string> {
 		{ "Disconnected", "offline" },
 		{ "Closed", "offline" },
+		{ "Nick taken", "offline" },
 		{ "Inactive", "offline" },
 		{ "Connecting", "connecting" } };
 		public ImageSource CurrentIconState

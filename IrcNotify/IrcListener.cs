@@ -75,6 +75,14 @@ namespace IrcNotify
 
 		public void Close()
 		{
+			if( CurrentStatus == "Listening" )
+			{
+				Send( "PART #dotdash\r\n" );
+			}
+			if( CurrentStatus == "Logged in" || CurrentStatus == "Connected" )
+			{
+				Send( "QUIT\r\n" );
+			}
 			_client.Close();
 			CurrentStatus = "Closed";
 		}
@@ -124,6 +132,7 @@ namespace IrcNotify
 				}
 				if( line.IndexOf( "433" ) >= 0 )
 				{
+					FireMessageSent( "Nick taken" );
 					CurrentStatus = "Nick taken";
 					return;
 				}

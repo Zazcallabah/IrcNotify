@@ -24,7 +24,7 @@ namespace IrcNotify
 		public void ConnectAsync()
 		{
 			_listener = new IrcListener();
-			_listener.PropertyChanged += new PropertyChangedEventHandler( BubbleStatusChange );
+			_listener.PropertyChanged += BubbleStatusChange;
 			_listener.MessageReceived += MessageReceived;
 			_listener.MessageSent += MessageSent;
 			_activeListener = new Thread( Connect );
@@ -41,7 +41,7 @@ namespace IrcNotify
 
 		void Connect()
 		{
-			if( _listener.CurrentStatus == "Inactive" || _listener.CurrentStatus == "Disconnected" )
+			if( _listener.CurrentStatus == "Inactive" || _listener.CurrentStatus == "Disconnected" || _listener.CurrentStatus == "Closed" )
 			{
 				_listener.Connect( ConfigurationManager.AppSettings["SERVER"], ConfigurationManager.AppSettings["PORT"] );
 				_listener.Logon();
