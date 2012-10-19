@@ -6,6 +6,7 @@ IRC bot that listens for messages and displays alerts in the windows notificatio
 
 TODO
 ====
+Support for several channels? servers? networks? Possibly interface for configurating this?
 
-A lot. Need config for connecting. Need config for filters to alert on. Need better menu. Need optional console.
+Support for dynamic listeners? (e.g. This regex decides if this should alert, this other extracts message parts, here is the priority order.)
 
