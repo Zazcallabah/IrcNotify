@@ -88,6 +88,7 @@ namespace IrcNotify
 				if( _listener.CurrentStatus != "Inactive" && _listener.CurrentStatus != "Disconnected" && _listener.CurrentStatus != "Closed" )
 					_listener.Close();
 				_listener = null;
+				FirePropertyChanged( "Status" );
 			}
 		}
 
