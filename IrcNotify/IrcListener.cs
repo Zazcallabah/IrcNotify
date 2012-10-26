@@ -61,7 +61,7 @@ namespace IrcNotify
 			try
 			{
 				var inline = _input.ReadLine();
-				if( inline.ToUpperInvariant().StartsWith( "PING " ) )
+				if( inline != null && inline.ToUpperInvariant().StartsWith( "PING " ) )
 				{
 					Send( "PONG " + inline.Substring( 5 ) + "\r\n" );
 				}
@@ -69,6 +69,8 @@ namespace IrcNotify
 			}
 			catch( System.IO.IOException )
 			{
+				ConsoleWriter.Write( string.Format( "*IOE: Remote disconnected?\n" ), true );
+
 				return null;
 			}
 		}
@@ -77,12 +79,15 @@ namespace IrcNotify
 		{
 			if( CurrentStatus == "Listening" )
 			{
+				ConsoleWriter.Write( string.Format( "****: Leaving channel. Status: {0}.\n", CurrentStatus ), true );
 				Send( "PART #dotdash\r\n" );
 			}
 			if( CurrentStatus == "Logged in" || CurrentStatus == "Connected" )
 			{
+				ConsoleWriter.Write( string.Format( "****: Sending Quit message to server. Status: {0}.\n", CurrentStatus ), true );
 				Send( "QUIT\r\n" );
 			}
+			ConsoleWriter.Write( string.Format( "****: Closing client. Status: {0}.\n", CurrentStatus ), true );
 			_client.Close();
 			CurrentStatus = "Closed";
 		}
@@ -134,10 +139,12 @@ namespace IrcNotify
 				{
 					FireMessageSent( "Nick taken" );
 					CurrentStatus = "Nick taken";
+					ConsoleWriter.Write( string.Format( "****: Error. Status: {0}.\n", CurrentStatus ), true );
 					return;
 				}
 			}
 			CurrentStatus = "Disconnected";
+			ConsoleWriter.Write( string.Format( "****: Got null from server during logon. Status: {0}.\n", CurrentStatus ), true );
 		}
 
 		public void Join( string channel )
@@ -154,6 +161,7 @@ namespace IrcNotify
 				FireMessageReceived( line );
 			}
 			CurrentStatus = "Disconnected";
+			ConsoleWriter.Write( string.Format( "****: Got null from read. Status: {0}.\n", CurrentStatus ), true );
 		}
 
 		void FirePropertyChanged( string property )

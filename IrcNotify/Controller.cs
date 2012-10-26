@@ -5,7 +5,6 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Hardcodet.Wpf.TaskbarNotification;
-using Microsoft.Win32;
 
 namespace IrcNotify
 {
@@ -15,7 +14,7 @@ namespace IrcNotify
 		readonly IrcController _irc;
 		string _data;
 		Visibility _visibileconsole;
-		bool _listensForPowerMode;
+
 		bool _hasAlert;
 		bool HasAlert
 		{
@@ -28,23 +27,17 @@ namespace IrcNotify
 			_icon = icon;
 			Data = "";
 			HasAlert = false;
+			ConsoleWriter.RegisterWriter( ( s ) => Data += s );
 			ConsoleVisibility = Visibility.Hidden;
 			icon.TrayBalloonTipClicked += ( o, e ) => Acknowledge();
-			Microsoft.Win32.SystemEvents.PowerModeChanged += PowerMode;
-			_listensForPowerMode = true;
-			Application.Current.Exit += (a,e)=>ClosePowerModeListening();
-			Application.Current.SessionEnding += (a,e)=>ClosePowerModeListening();
 
 			_irc = new IrcController( ShowNotification, ( s ) => { Data += s; } );
+			_powerstate = new SystemPowerStateListener( _irc );
 			_irc.PropertyChanged += ( o, e ) => FirePropChanged( "CurrentIconState" );
 			_irc.ConnectAsync();
 
 		}
 
-		void PowerMode( object sender, PowerModeChangedEventArgs e )
-		{
-			_irc.Close();
-		}
 
 		public void Reconnect()
 		{
@@ -65,18 +58,10 @@ namespace IrcNotify
 			set { _visibileconsole = value; FirePropChanged( "ConsoleVisibility" ); }
 		}
 
-		void ClosePowerModeListening()
-		{
-			if( _listensForPowerMode )
-			{
-				Microsoft.Win32.SystemEvents.PowerModeChanged -= PowerMode;
-				_listensForPowerMode = false;
-			}
-		}
 
 		public void Dispose()
 		{
-			ClosePowerModeListening();
+			_powerstate.ClosePowerModeListening();
 			_irc.Close();
 		}
 
@@ -95,6 +80,9 @@ namespace IrcNotify
 		{ "Nick taken", "offline" },
 		{ "Inactive", "offline" },
 		{ "Connecting", "connecting" } };
+
+		readonly SystemPowerStateListener _powerstate;
+
 		public ImageSource CurrentIconState
 		{
 			get

@@ -27,6 +27,7 @@ namespace IrcNotify
 			_listener.PropertyChanged += BubbleStatusChange;
 			_listener.MessageReceived += MessageReceived;
 			_listener.MessageSent += MessageSent;
+			ConsoleWriter.Write( string.Format( "****: Registering listener events.\n" ), true );
 			_activeListener = new Thread( Connect );
 			_activeListener.Start();
 		}
@@ -41,16 +42,23 @@ namespace IrcNotify
 
 		void Connect()
 		{
+
 			if( _listener.CurrentStatus == "Inactive" || _listener.CurrentStatus == "Disconnected" || _listener.CurrentStatus == "Closed" )
 			{
+				ConsoleWriter.Write( string.Format( "****: Connecting async with listener status {0}.\n", _listener.CurrentStatus ), true );
 				_listener.Connect( ConfigurationManager.AppSettings["SERVER"], ConfigurationManager.AppSettings["PORT"] );
+				ConsoleWriter.Write( string.Format( "****: Connected. Status: {0}.\n", _listener.CurrentStatus ), true );
 				_listener.Logon();
+				ConsoleWriter.Write( string.Format( "****: Logged on. Status: {0}.\n", _listener.CurrentStatus ), true );
 				if( _listener.CurrentStatus == "Logged in" )
 				{
 					_listener.Join( ConfigurationManager.AppSettings["CHANNEL"] );
+					ConsoleWriter.Write( string.Format( "****: Joined channel. Status: {0}.\n", _listener.CurrentStatus ), true );
 					_listener.Loop();
 				}
 			}
+			else
+				ConsoleWriter.Write( string.Format( "****: Didnt reconnect, listener status {0}.\n", _listener.CurrentStatus ), true );
 		}
 
 		readonly IEnumerable<string> _parts = new[] { "JOIN", "PART", "QUIT" };
@@ -82,6 +90,7 @@ namespace IrcNotify
 		{
 			if( _listener != null )
 			{
+				ConsoleWriter.Write( string.Format( "****: Deregistering listener events.\n" ), true );
 				_listener.MessageReceived -= MessageReceived;
 				_listener.MessageSent -= MessageSent;
 				_listener.PropertyChanged -= BubbleStatusChange;
@@ -96,12 +105,14 @@ namespace IrcNotify
 		{
 			if( _listener != null && ( _listener.CurrentStatus == "Disconnected" || _listener.CurrentStatus == "Inactive" ) )
 			{
+				ConsoleWriter.Write( string.Format( "****: Closing existing connection. Status:{0}\n", _listener.CurrentStatus ), true );
 				Close();
 			}
 
 
 			if( _listener == null )
 			{
+				ConsoleWriter.Write( "****: Connecting async\n", true );
 				ConnectAsync();
 			}
 		}
