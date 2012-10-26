@@ -90,6 +90,7 @@ namespace IrcNotify
 				var iconname = HasAlert ? "notify" : "chat";
 				if( _uriLookup.ContainsKey( _irc.Status ) )
 					iconname = _uriLookup[_irc.Status];
+				ConsoleWriter.Write( string.Format( "****: Fetching icon for status {1}, name:{0}\n", iconname, _irc.Status ), true );
 				return new BitmapImage( new Uri( @"pack://application:,,,/IrcNotify;component/Resources/" + iconname + ".ico" ) );
 			}
 		}

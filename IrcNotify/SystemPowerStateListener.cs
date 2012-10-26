@@ -15,18 +15,20 @@ namespace IrcNotify
 
 		void PowerMode( object sender, PowerModeChangedEventArgs e )
 		{
+			ConsoleWriter.Write( "****: Power mode changed event fired!\n", true );
 			_ircController.Close();
 		}
 
 		public void ClosePowerModeListening()
 		{
+#if !DEBUG
 			if( _listensForPowerMode )
 			{
-				if( Settings.DebugMode )
-
-					Microsoft.Win32.SystemEvents.PowerModeChanged -= PowerMode;
+				ConsoleWriter.Write( "****: Deregistering power mode changed event\n", true );
+				Microsoft.Win32.SystemEvents.PowerModeChanged -= PowerMode;
 				_listensForPowerMode = false;
 			}
+#endif
 		}
 
 		public SystemPowerStateListener( IrcController ircController )
@@ -35,11 +37,12 @@ namespace IrcNotify
 
 			// visual studio + static api events = badness?
 #if !DEBUG
+			ConsoleWriter.Write( "****: Registering power mode changed event\n", true );
 			Microsoft.Win32.SystemEvents.PowerModeChanged += PowerMode;
 			_listensForPowerMode = true;
-#endif
 			Application.Current.Exit += ( a, e ) => ClosePowerModeListening();
 			Application.Current.SessionEnding += ( a, e ) => ClosePowerModeListening();
+#endif
 		}
 	}
 }
