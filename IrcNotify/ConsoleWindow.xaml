@@ -1,7 +1,7 @@
 ﻿<Window x:Class="IrcNotify.ConsoleWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="ConsoleWindow" Height="300" Width="300">
+        Title="ConsoleWindow" Height="300" Width="300" Icon="Resources\settings_32.png">
 	<ScrollViewer>
 		<TextBlock Text="{Binding Data}" Margin="4"></TextBlock>
 	</ScrollViewer>
