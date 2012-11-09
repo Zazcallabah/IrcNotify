@@ -1,6 +1,5 @@
 ﻿using System;
 using System.ComponentModel;
-using System.Configuration;
 using System.Net.Sockets;
 
 namespace IrcNotify
@@ -52,6 +51,10 @@ namespace IrcNotify
 		void Send( string command )
 		{
 			_output.Write( command );
+			if( _output == null )
+			{
+				ConsoleWriter.Write( "ERR: _output is null, will throw" );
+			}
 			_output.Flush();
 			FireMessageSent( command );
 		}
@@ -82,13 +85,24 @@ namespace IrcNotify
 				ConsoleWriter.Write( string.Format( "****: Leaving channel. Status: {0}.\n", CurrentStatus ), true );
 				Send( "PART #dotdash\r\n" );
 			}
+
 			if( CurrentStatus == "Logged in" || CurrentStatus == "Connected" )
 			{
 				ConsoleWriter.Write( string.Format( "****: Sending Quit message to server. Status: {0}.\n", CurrentStatus ), true );
 				Send( "QUIT\r\n" );
 			}
+
 			ConsoleWriter.Write( string.Format( "****: Closing client. Status: {0}.\n", CurrentStatus ), true );
-			_client.Close();
+
+			try
+			{
+				_client.Close();
+			}
+			catch
+			{
+				ConsoleWriter.Write( "Err: Tried closing already closed connection" );
+			}
+
 			CurrentStatus = "Closed";
 		}
 
@@ -118,24 +132,21 @@ namespace IrcNotify
 			_output = new System.IO.StreamWriter( _comm );
 			CurrentStatus = "Connected";
 		}
-		public void Logon()
-		{
-			String nick = ConfigurationManager.AppSettings["NICK"];
-			String login = ConfigurationManager.AppSettings["LOGIN"];
 
+		public void Logon( string nick, string login, string altnick, string server )
+		{
 			Send( "NICK " + nick + "\r\n" );
-			Send( string.Format( "USER {0} {1} {2} :fulhak2.0\r\n", login, ConfigurationManager.AppSettings["ALT_NICK"],
-							   ConfigurationManager.AppSettings["SERVER"] ) );
+			Send( string.Format( "USER {0} {1} {2} :fulhak2.0\r\n", login, altnick, server ) );
 
 			String line;
 			while( ( line = BlockingRead() ) != null )
 			{
-				if( line.IndexOf( "004" ) >= 0 )
+				if( line.IndexOf( "004", StringComparison.InvariantCulture ) >= 0 )
 				{
 					CurrentStatus = "Logged in";
 					return;
 				}
-				if( line.IndexOf( "433" ) >= 0 )
+				if( line.IndexOf( "433", StringComparison.InvariantCulture ) >= 0 )
 				{
 					FireMessageSent( "Nick taken" );
 					CurrentStatus = "Nick taken";
@@ -171,6 +182,7 @@ namespace IrcNotify
 				PropertyChanged( this, new PropertyChangedEventArgs( property ) );
 			}
 		}
+
 		public event PropertyChangedEventHandler PropertyChanged;
 	}
 }

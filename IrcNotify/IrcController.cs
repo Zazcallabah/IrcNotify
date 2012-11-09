@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Configuration;
 using System.Linq;
+using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using System.Threading;
 
@@ -42,32 +43,47 @@ namespace IrcNotify
 
 		void Connect()
 		{
-
-			if( _listener.CurrentStatus == "Inactive" || _listener.CurrentStatus == "Disconnected" || _listener.CurrentStatus == "Closed" )
+			try
 			{
-				ConsoleWriter.Write( string.Format( "****: Connecting async with listener status {0}.\n", _listener.CurrentStatus ), true );
-				_listener.Connect( ConfigurationManager.AppSettings["SERVER"], ConfigurationManager.AppSettings["PORT"] );
-				ConsoleWriter.Write( string.Format( "****: Connected. Status: {0}.\n", _listener.CurrentStatus ), true );
-				_listener.Logon();
-				ConsoleWriter.Write( string.Format( "****: Logged on. Status: {0}.\n", _listener.CurrentStatus ), true );
-				if( _listener.CurrentStatus == "Logged in" )
+				if( _listener.CurrentStatus == "Inactive" || _listener.CurrentStatus == "Disconnected" || _listener.CurrentStatus == "Closed" )
 				{
-					_listener.Join( ConfigurationManager.AppSettings["CHANNEL"] );
-					ConsoleWriter.Write( string.Format( "****: Joined channel. Status: {0}.\n", _listener.CurrentStatus ), true );
-					_listener.Loop();
+					string server = ConfigurationManager.AppSettings["SERVER"];
+					ConsoleWriter.Write( string.Format( "****: Connecting async with listener status {0}.\n", _listener.CurrentStatus ), true );
+					_listener.Connect( server, ConfigurationManager.AppSettings["PORT"] );
+					ConsoleWriter.Write( string.Format( "****: Connected. Status: {0}.\n", _listener.CurrentStatus ), true );
+					_listener.Logon( ConfigurationManager.AppSettings["NICK"], ConfigurationManager.AppSettings["LOGIN"], ConfigurationManager.AppSettings["ALT_NICK"], server );
+					ConsoleWriter.Write( string.Format( "****: Logged on. Status: {0}.\n", _listener.CurrentStatus ), true );
+					if( _listener.CurrentStatus == "Logged in" )
+					{
+						_listener.Join( ConfigurationManager.AppSettings["CHANNEL"] );
+						ConsoleWriter.Write( string.Format( "****: Joined channel. Status: {0}.\n", _listener.CurrentStatus ), true );
+						_listener.Loop();
+					}
 				}
+				else
+					ConsoleWriter.Write( string.Format( "****: Didn't reconnect, listener status {0}.\n", _listener.CurrentStatus ), true );
 			}
-			else
-				ConsoleWriter.Write( string.Format( "****: Didnt reconnect, listener status {0}.\n", _listener.CurrentStatus ), true );
+			catch( SocketException )
+			{
+				ConsoleWriter.Write( "ERR: Not connected to internet" );
+				Close();
+			}
+			catch( NullReferenceException e )
+			{
+				ConsoleWriter.Write( string.Format("ERR: Connection dropped (NullRef from {0})",e.StackTrace) );
+				Close();
+			}
 		}
 
 		readonly IEnumerable<string> _parts = new[] { "JOIN", "PART", "QUIT" };
+
 		readonly Regex _privmsg = new Regex( ConfigurationManager.AppSettings["PRIVMSG_EXTRACT"] );
+
 		readonly Regex _commands = new Regex( ConfigurationManager.AppSettings["JOINPART_EXTRACT"] );
+
 		void MessageReceived( object sender, MessageEventArgs e )
 		{
 			_console( "RECV: " + e.Message + "\r\n" );
-
 
 			if( e.Message.Contains( "PRIVMSG" ) )
 			{
@@ -109,7 +125,6 @@ namespace IrcNotify
 				Close();
 			}
 
-
 			if( _listener == null )
 			{
 				ConsoleWriter.Write( "****: Connecting async\n", true );
@@ -124,6 +139,7 @@ namespace IrcNotify
 			if( PropertyChanged != null )
 				PropertyChanged( this, new PropertyChangedEventArgs( property ) );
 		}
+
 		public event PropertyChangedEventHandler PropertyChanged;
 	}
 }
