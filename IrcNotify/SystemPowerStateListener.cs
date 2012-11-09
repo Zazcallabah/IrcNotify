@@ -15,8 +15,9 @@ namespace IrcNotify
 
 		void PowerMode( object sender, PowerModeChangedEventArgs e )
 		{
-			ConsoleWriter.Write( "****: Power mode changed event fired!\n", true );
-			_ircController.Close();
+			ConsoleWriter.Write( string.Format( "****: Power mode changed event fired! {0}\n", e.Mode ), true );
+			if( e.Mode == PowerModes.Suspend )
+				_ircController.Close();
 		}
 
 		public void ClosePowerModeListening()
