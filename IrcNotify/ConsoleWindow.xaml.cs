@@ -11,6 +11,11 @@ namespace IrcNotify
 		{
 			InitializeComponent();
 		}
-		 
+
+		private void Window_GotFocus( object sender, RoutedEventArgs e )
+		{
+			Scroll.ScrollToBottom();
+		}
+
 	}
 }
