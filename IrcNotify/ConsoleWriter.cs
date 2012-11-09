@@ -17,7 +17,7 @@ namespace IrcNotify
 			if( !verbose || ( Settings.DebugMode ) )
 				foreach( var o in Output )
 				{
-					o( data );
+					o( DateTime.Now.ToLongTimeString() + "> " + data );
 				}
 		}
 	}
