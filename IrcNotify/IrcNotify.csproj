@@ -60,6 +60,7 @@
     <Compile Include="ConsoleWriter.cs" />
     <Compile Include="Settings.cs" />
     <Compile Include="SystemPowerStateListener.cs" />
+    <Compile Include="User.cs" />
     <Page Include="ConsoleWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
