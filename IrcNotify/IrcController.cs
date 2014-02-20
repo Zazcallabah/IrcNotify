@@ -135,7 +135,8 @@ namespace IrcNotify
 			else if( _parts.Any( p => e.Message.Contains( p ) ) )
 			{
 				var match = _commands.Match( e.Message );
-				_alert( string.Format( "{0}: {1}", match.Groups["CMD"], match.Groups["NICK"] ), "..." );
+				if( match.Success )
+					_alert( string.Format( "{0}: {1}", match.Groups["CMD"], match.Groups["NICK"] ), "..." );
 			}
 		}
 

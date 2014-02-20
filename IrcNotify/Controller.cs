@@ -16,7 +16,7 @@ namespace IrcNotify
 		readonly IList<IrcController> _ircControllers;
 		string _data;
 		Visibility _visibileconsole;
-		int MaxBacklog;
+		readonly int _maxBacklog;
 
 		bool _hasAlert;
 		bool HasAlert
@@ -35,14 +35,15 @@ namespace IrcNotify
 			ConsoleWriter.RegisterWriter( ( s ) => Data += s );
 			ConsoleVisibility = Visibility.Hidden;
 			icon.TrayBalloonTipClicked += ( o, e ) => Acknowledge();
-			MaxBacklog = Int32.Parse( ConfigurationManager.AppSettings["BACKLOG_SIZE"] );
+			_maxBacklog = Int32.Parse( ConfigurationManager.AppSettings["BACKLOG_SIZE"] );
 			var servers = ConfigurationManager.AppSettings["SERVERS"].Split( ',' );
 			var channels = ConfigurationManager.AppSettings["CHANNELS"].Split( ',' );
+			var globalchannels = channels.Where( c => !c.Contains( ":" ) ).ToList();
 			var user = new User( ConfigurationManager.AppSettings["NICKS"].Split( ',' ) );
 			for( int i = 0; i < servers.Length; i++ )
 			{
 				var ch = channels.Where( c => c.StartsWith( i + ":" ) );
-				var irc = new IrcController( ShowNotification, ( s ) => { Data += s; }, servers[i], ch, user );
+				var irc = new IrcController( ShowNotification, ( s ) => { Data += s; }, servers[i], globalchannels.Concat( ch ), user );
 				irc.PropertyChanged += ( o, e ) => FirePropChanged( "CurrentIconState" );
 				irc.ConnectAsync();
 				_powerstate.RegisterController( irc );
@@ -71,8 +72,8 @@ namespace IrcNotify
 
 			set
 			{
-				if( value.Length > MaxBacklog )
-					_data = value.Substring( value.Length - MaxBacklog );
+				if( value.Length > _maxBacklog )
+					_data = value.Substring( value.Length - _maxBacklog );
 				else
 					_data = value;
 				FirePropChanged( "Data" );
