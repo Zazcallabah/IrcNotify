@@ -130,7 +130,8 @@ namespace IrcNotify
 			if( e.Message.Contains( "PRIVMSG" ) )
 			{
 				var match = _privmsg.Match( e.Message );
-				_alert( string.Format( "{0}: {1}", match.Groups["CHANNEL"], match.Groups["NICK"] ), match.Groups["MSG"].ToString() );
+				if( match.Success )
+					_alert( string.Format( "{0}: {1}", match.Groups["CHANNEL"], match.Groups["NICK"] ), match.Groups["MSG"].ToString() );
 			}
 			else if( _parts.Any( p => e.Message.Contains( p ) ) )
 			{
