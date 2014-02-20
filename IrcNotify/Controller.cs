@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Configuration;
+using System.Linq;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -11,9 +13,10 @@ namespace IrcNotify
 	class Controller : IDisposable, INotifyPropertyChanged
 	{
 		readonly TaskbarIcon _icon;
-		readonly IrcController _irc;
+		readonly IList<IrcController> _ircControllers;
 		string _data;
 		Visibility _visibileconsole;
+		int MaxBacklog;
 
 		bool _hasAlert;
 		bool HasAlert
@@ -25,23 +28,31 @@ namespace IrcNotify
 		public Controller( TaskbarIcon icon )
 		{
 			_icon = icon;
+			_powerstate = new SystemPowerStateListener();
 			Data = "";
 			HasAlert = false;
 			ConsoleWriter.RegisterWriter( ( s ) => Data += s );
 			ConsoleVisibility = Visibility.Hidden;
 			icon.TrayBalloonTipClicked += ( o, e ) => Acknowledge();
-
-			_irc = new IrcController( ShowNotification, ( s ) => { Data += s; } );
-			_powerstate = new SystemPowerStateListener( _irc );
-			_irc.PropertyChanged += ( o, e ) => FirePropChanged( "CurrentIconState" );
-			_irc.ConnectAsync();
-
+			MaxBacklog = Int32.Parse( ConfigurationManager.AppSettings["BACKLOG_SIZE"] );
+			var servers = ConfigurationManager.AppSettings["SERVERS"].Split( ',' );
+			var channels = ConfigurationManager.AppSettings["CHANNELS"].Split( ',' );
+			var user = new User( ConfigurationManager.AppSettings["NICKS"].Split( ',' ) );
+			for( int i = 0; i < servers.Length; i++ )
+			{
+				var ch = channels.Where( c => c.StartsWith( i + ":" ) );
+				var irc = new IrcController( ShowNotification, ( s ) => { Data += s; }, servers[i], ch, user );
+				irc.PropertyChanged += ( o, e ) => FirePropChanged( "CurrentIconState" );
+				irc.ConnectAsync();
+				_powerstate.RegisterController( irc );
+				_ircControllers.Add( irc );
+			}
 		}
-
 
 		public void Reconnect()
 		{
-			_irc.ReconnectIfDisconnected();
+			foreach( var irc in _ircControllers )
+				irc.ReconnectIfDisconnected();
 		}
 
 		public void ShowNotification( string title, string msg )
@@ -50,7 +61,22 @@ namespace IrcNotify
 			_icon.ShowBalloonTip( title, msg, _icon.Icon );
 		}
 
-		public string Data { get { return _data; } set { _data = value; FirePropChanged( "Data" ); } }
+		public string Data
+		{
+			get
+			{
+				return _data;
+			}
+
+			set
+			{
+				if( value.Length > MaxBacklog )
+					_data = value.Substring( value.Length - MaxBacklog );
+				else
+					_data = value;
+				FirePropChanged( "Data" );
+			}
+		}
 
 		public Visibility ConsoleVisibility
 		{
@@ -62,7 +88,8 @@ namespace IrcNotify
 		public void Dispose()
 		{
 			_powerstate.ClosePowerModeListening();
-			_irc.Close();
+			foreach( var irc in _ircControllers )
+				irc.Close();
 		}
 
 		void FirePropChanged( string property )
@@ -88,9 +115,11 @@ namespace IrcNotify
 			get
 			{
 				var iconname = HasAlert ? "notify" : "chat";
-				if( _uriLookup.ContainsKey( _irc.Status ) )
-					iconname = _uriLookup[_irc.Status];
-				ConsoleWriter.Write( string.Format( "****: Fetching icon for status {1}, name:{0}\n", iconname, _irc.Status ), true );
+				foreach( var irc in _ircControllers )
+				{
+					if( _uriLookup.ContainsKey( irc.Status ) )
+						iconname = _uriLookup[irc.Status];
+				}
 				return new BitmapImage( new Uri( @"pack://application:,,,/IrcNotify;component/Resources/" + iconname + ".ico" ) );
 			}
 		}

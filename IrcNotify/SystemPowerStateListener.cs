@@ -1,4 +1,5 @@
-﻿using System.Windows;
+﻿using System.Collections.Generic;
+using System.Windows;
 using Microsoft.Win32;
 
 namespace IrcNotify
@@ -10,14 +11,15 @@ namespace IrcNotify
 	/// </summary>
 	class SystemPowerStateListener
 	{
-		readonly IrcController _ircController;
+		readonly IList<IrcController> _ircControllers;
 		bool _listensForPowerMode;
 
 		void PowerMode( object sender, PowerModeChangedEventArgs e )
 		{
 			ConsoleWriter.Write( string.Format( "****: Power mode changed event fired! {0}\n", e.Mode ), true );
 			if( e.Mode == PowerModes.Suspend )
-				_ircController.Close();
+				foreach( var irc in _ircControllers )
+					irc.Close();
 		}
 
 		public void ClosePowerModeListening()
@@ -32,9 +34,14 @@ namespace IrcNotify
 #endif
 		}
 
-		public SystemPowerStateListener( IrcController ircController )
+		public void RegisterController( IrcController controller )
 		{
-			_ircController = ircController;
+			_ircControllers.Add( controller );
+		}
+
+		public SystemPowerStateListener()
+		{
+			_ircControllers = new List<IrcController>();
 
 			// visual studio + static api events = badness?
 #if !DEBUG

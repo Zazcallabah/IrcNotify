@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Configuration;
@@ -16,10 +17,28 @@ namespace IrcNotify
 		Thread _activeListener;
 		IrcListener _listener;
 
-		public IrcController( Action<string, string> alert, Action<string> console )
+		public IrcController( Action<string, string> alert, Action<string> console, string server, IEnumerable<string> channels, User user )
 		{
+			User = user;
+			SetServerAndPort( server );
+			Channels = channels;
 			_alert = alert;
 			_console = console;
+		}
+
+		void SetServerAndPort( string server )
+		{
+			var split = server.Split( new[] { ':' }, StringSplitOptions.RemoveEmptyEntries );
+			if( split.Length == 2 )
+			{
+				Server = split[0];
+				Port = split[1];
+			}
+			else
+			{
+				Server = server;
+				Port = "6667";
+			}
 		}
 
 		public void ConnectAsync()
@@ -47,16 +66,18 @@ namespace IrcNotify
 			{
 				if( _listener.CurrentStatus == "Inactive" || _listener.CurrentStatus == "Disconnected" || _listener.CurrentStatus == "Closed" )
 				{
-					string server = ConfigurationManager.AppSettings["SERVER"];
 					ConsoleWriter.Write( string.Format( "****: Connecting async with listener status {0}.\n", _listener.CurrentStatus ), true );
-					_listener.Connect( server, ConfigurationManager.AppSettings["PORT"] );
+					_listener.Connect( Server, Port );
 					ConsoleWriter.Write( string.Format( "****: Connected. Status: {0}.\n", _listener.CurrentStatus ), true );
-					_listener.Logon( ConfigurationManager.AppSettings["NICK"], ConfigurationManager.AppSettings["LOGIN"], ConfigurationManager.AppSettings["ALT_NICK"], server );
+					_listener.Logon( User, Server );
 					ConsoleWriter.Write( string.Format( "****: Logged on. Status: {0}.\n", _listener.CurrentStatus ), true );
 					if( _listener.CurrentStatus == "Logged in" )
 					{
-						_listener.Join( ConfigurationManager.AppSettings["CHANNEL"] );
-						ConsoleWriter.Write( string.Format( "****: Joined channel. Status: {0}.\n", _listener.CurrentStatus ), true );
+						foreach( var channel in Channels )
+						{
+							_listener.Join( channel );
+							ConsoleWriter.Write( string.Format( "****: Joined channel {1}, Status: {0}.\n", _listener.CurrentStatus, channel ), true );
+						}
 						_listener.Loop();
 					}
 				}
@@ -70,16 +91,37 @@ namespace IrcNotify
 			}
 			catch( NullReferenceException e )
 			{
-				ConsoleWriter.Write( string.Format("ERR: Connection dropped (NullRef from {0})",e.StackTrace) );
+				ConsoleWriter.Write( string.Format( "ERR: Connection dropped (NullRef from {0})", e.StackTrace ) );
 				Close();
 			}
 		}
+
+		public User User { get; private set; }
+
+		public IEnumerable<string> Channels
+		{
+			get { return _channels; }
+			private set
+			{
+				var newch = new List<string>();
+				foreach( var datastring in value )
+				{
+					var parts = datastring.Split( new[] { ':' }, StringSplitOptions.RemoveEmptyEntries );
+					newch.Add( parts.Length == 2 ? parts[1] : datastring );
+				}
+				_channels = newch;
+			}
+		}
+
+		public string Server { get; private set; }
+		public string Port { get; private set; }
 
 		readonly IEnumerable<string> _parts = new[] { "JOIN", "PART", "QUIT" };
 
 		readonly Regex _privmsg = new Regex( ConfigurationManager.AppSettings["PRIVMSG_EXTRACT"] );
 
 		readonly Regex _commands = new Regex( ConfigurationManager.AppSettings["JOINPART_EXTRACT"] );
+		IEnumerable<string> _channels;
 
 		void MessageReceived( object sender, MessageEventArgs e )
 		{
@@ -106,20 +148,21 @@ namespace IrcNotify
 		{
 			if( _listener != null )
 			{
-				ConsoleWriter.Write( string.Format( "****: Deregistering listener events.\n" ), true );
-				_listener.MessageReceived -= MessageReceived;
-				_listener.MessageSent -= MessageSent;
-				_listener.PropertyChanged -= BubbleStatusChange;
-				if( _listener.CurrentStatus != "Inactive" && _listener.CurrentStatus != "Disconnected" && _listener.CurrentStatus != "Closed" )
-					_listener.Close();
+				var l = _listener;
 				_listener = null;
+				ConsoleWriter.Write( string.Format( "****: Deregistering listener events.\n" ), true );
+				l.MessageReceived -= MessageReceived;
+				l.MessageSent -= MessageSent;
+				l.PropertyChanged -= BubbleStatusChange;
+				if( l.CurrentStatus != "Inactive" && l.CurrentStatus != "Disconnected" && l.CurrentStatus != "Closed" )
+					l.Close();
 				FirePropertyChanged( "Status" );
 			}
 		}
 
 		public void ReconnectIfDisconnected()
 		{
-			if( _listener != null && ( _listener.CurrentStatus == "Disconnected" || _listener.CurrentStatus == "Inactive" ) )
+			if( _listener != null && ( _listener.CurrentStatus == "Disconnected" || _listener.CurrentStatus == "Inactive" || _listener.CurrentStatus == "Nick taken" ) )
 			{
 				ConsoleWriter.Write( string.Format( "****: Closing existing connection. Status:{0}\n", _listener.CurrentStatus ), true );
 				Close();

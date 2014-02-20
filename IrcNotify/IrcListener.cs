@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Net.Sockets;
 
@@ -23,6 +24,7 @@ namespace IrcNotify
 
 		public IrcListener()
 		{
+			_closing = false;
 			CurrentStatus = "Inactive";
 		}
 
@@ -77,33 +79,37 @@ namespace IrcNotify
 				return null;
 			}
 		}
-
+		bool _closing;
 		public void Close()
 		{
-			if( CurrentStatus == "Listening" )
+			if( !_closing )
 			{
-				ConsoleWriter.Write( string.Format( "****: Leaving channel. Status: {0}.\n", CurrentStatus ), true );
-				Send( "PART #dotdash\r\n" );
-			}
+				_closing = true;
+				foreach( var channel in ListeningChannels )
+				{
+					ConsoleWriter.Write( string.Format( "****: Leaving channel {1}. Status: {0}.\n", CurrentStatus, channel ), true );
+					Send( string.Format( "PART {0}\r\n", channel ) );
+				}
 
-			if( CurrentStatus == "Logged in" || CurrentStatus == "Connected" )
-			{
-				ConsoleWriter.Write( string.Format( "****: Sending Quit message to server. Status: {0}.\n", CurrentStatus ), true );
-				Send( "QUIT\r\n" );
-			}
+				if( CurrentStatus == "Logged in" || CurrentStatus == "Connected" )
+				{
+					ConsoleWriter.Write( string.Format( "****: Sending Quit message to server. Status: {0}.\n", CurrentStatus ), true );
+					Send( "QUIT\r\n" );
+				}
 
-			ConsoleWriter.Write( string.Format( "****: Closing client. Status: {0}.\n", CurrentStatus ), true );
+				ConsoleWriter.Write( string.Format( "****: Closing client. Status: {0}.\n", CurrentStatus ), true );
 
-			try
-			{
-				_client.Close();
+				try
+				{
+					_client.Close();
+				}
+				catch
+				{
+					ConsoleWriter.Write( "Err: Tried closing already closed connection" );
+				}
+				CurrentStatus = "Closed";
+				_closing = false;
 			}
-			catch
-			{
-				ConsoleWriter.Write( "Err: Tried closing already closed connection" );
-			}
-
-			CurrentStatus = "Closed";
 		}
 
 		public void Connect( string server, string port )
@@ -133,10 +139,10 @@ namespace IrcNotify
 			CurrentStatus = "Connected";
 		}
 
-		public void Logon( string nick, string login, string altnick, string server )
+		public void Logon( User user, string server )
 		{
-			Send( "NICK " + nick + "\r\n" );
-			Send( string.Format( "USER {0} {1} {2} :fulhak2.0\r\n", login, altnick, server ) );
+			Send( "NICK " + user.Nick + "\r\n" );
+			Send( string.Format( "USER {0} {1} {2} :fulhak2.0\r\n", user.Login, user.AltNick, server ) );
 
 			String line;
 			while( ( line = BlockingRead() ) != null )
@@ -158,10 +164,12 @@ namespace IrcNotify
 			ConsoleWriter.Write( string.Format( "****: Got null from server during logon. Status: {0}.\n", CurrentStatus ), true );
 		}
 
+		public IList<string> ListeningChannels = new List<string>();
+
 		public void Join( string channel )
 		{
+			ListeningChannels.Add( channel );
 			Send( "JOIN " + channel + "\r\n" );
-			CurrentStatus = "Listening";
 		}
 
 		public void Loop()
