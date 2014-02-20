@@ -29,6 +29,7 @@ namespace IrcNotify
 		{
 			_icon = icon;
 			_powerstate = new SystemPowerStateListener();
+			_ircControllers = new List<IrcController>();
 			Data = "";
 			HasAlert = false;
 			ConsoleWriter.RegisterWriter( ( s ) => Data += s );
