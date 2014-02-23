@@ -10,15 +10,24 @@ using System.Threading;
 
 namespace IrcNotify
 {
-	class IrcController : INotifyPropertyChanged
+	public class IrcController : INotifyPropertyChanged
 	{
 		readonly Action<string, string> _alert;
 		readonly Action<string> _console;
 		Thread _activeListener;
 		IrcListener _listener;
 
-		public IrcController( Action<string, string> alert, Action<string> console, string server, IEnumerable<string> channels, User user )
+		public IrcController(
+			Action<string, string> alert,
+			Action<string> console,
+			string server,
+			IEnumerable<string> channels,
+			User user,
+			string messageFilterRegex,
+			string commandFilterRegex )
 		{
+			MessageFilter = new Regex( messageFilterRegex );
+			CommandFilter = new Regex( commandFilterRegex );
 			User = user;
 			SetServerAndPort( server );
 			Channels = channels;
@@ -118,24 +127,24 @@ namespace IrcNotify
 
 		readonly IEnumerable<string> _parts = new[] { "JOIN", "PART", "QUIT" };
 
-		readonly Regex _privmsg = new Regex( ConfigurationManager.AppSettings["PRIVMSG_EXTRACT"] );
+		readonly Regex MessageFilter;
+		readonly Regex CommandFilter;
 
-		readonly Regex _commands = new Regex( ConfigurationManager.AppSettings["JOINPART_EXTRACT"] );
 		IEnumerable<string> _channels;
 
-		void MessageReceived( object sender, MessageEventArgs e )
+		public void MessageReceived( object sender, MessageEventArgs e )
 		{
 			_console( "RECV: " + e.Message + "\r\n" );
 
 			if( e.Message.Contains( "PRIVMSG" ) )
 			{
-				var match = _privmsg.Match( e.Message );
+				var match = MessageFilter.Match( e.Message );
 				if( match.Success )
 					_alert( string.Format( "{0}: {1}", match.Groups["CHANNEL"], match.Groups["NICK"] ), match.Groups["MSG"].ToString() );
 			}
 			else if( _parts.Any( p => e.Message.Contains( p ) ) )
 			{
-				var match = _commands.Match( e.Message );
+				var match = CommandFilter.Match( e.Message );
 				if( match.Success )
 					_alert( string.Format( "{0}: {1}", match.Groups["CMD"], match.Groups["NICK"] ), "..." );
 			}
@@ -145,6 +154,8 @@ namespace IrcNotify
 		{
 			_console( "SENT: " + e.Message );
 		}
+
+		public bool ExceptionalState { get { return !_activeListener.IsAlive && _listener != null; } }
 
 		public void Close()
 		{

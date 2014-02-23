@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using Microsoft.Win32;
 
@@ -20,6 +21,12 @@ namespace IrcNotify
 			if( e.Mode == PowerModes.Suspend )
 				foreach( var irc in _ircControllers )
 					irc.Close();
+			else
+				foreach( var irc in _ircControllers.Where( r => r.ExceptionalState ) )
+				{
+					ConsoleWriter.Write( "****: Bad state detected." );
+					irc.Close();
+				}
 		}
 
 		public void ClosePowerModeListening()

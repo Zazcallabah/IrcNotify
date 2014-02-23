@@ -43,7 +43,7 @@ namespace IrcNotify
 			for( int i = 0; i < servers.Length; i++ )
 			{
 				var ch = channels.Where( c => c.StartsWith( i + ":" ) );
-				var irc = new IrcController( ShowNotification, ( s ) => { Data += s; }, servers[i], globalchannels.Concat( ch ), user );
+				var irc = new IrcController( ShowNotification, ( s ) => { Data += s; }, servers[i], globalchannels.Concat( ch ), user, ConfigurationManager.AppSettings["PRIVMSG_EXTRACT"], ConfigurationManager.AppSettings["JOINPART_EXTRACT"] );
 				irc.PropertyChanged += ( o, e ) => FirePropChanged( "CurrentIconState" );
 				irc.ConnectAsync();
 				_powerstate.RegisterController( irc );
